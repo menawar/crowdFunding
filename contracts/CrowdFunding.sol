@@ -13,9 +13,10 @@ interface IERC20 {
 }
 
 contract CrowdFund {
-  address public owner;
+  address payable public owner;
   uint256 public totalCampaigns;
-  address internal crowdTokenAddress = 0x20C1EB3cAA538954865aD9006bcC8a6f9C1952f3;
+   
+   address internal cUsdTokenAddress = 0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1;
 
     struct Campaign {
         address payable campaignOwner; 
@@ -49,12 +50,80 @@ contract CrowdFund {
     }
 
      function createCampaign(string memory _campaignTitle, string memory _campaignDescription, uint256 _goalAmount, uint256 _fundingPeriodInDays ) public {
-        require(bytes(_campaignTitle).length !=0 && bytes(_campaignDescription).length !=0, 'Campaign Title and description cannot be empty!');
-        require(_goalAmount > 0, 'Goal amount must be more than 0');
-        require(_fundingPeriodInDays >=1 && _fundingPeriodInDays <=7, 'Funding Period should be between 1 -7 days');
+        require(bytes(_campaignTitle).length != 0 && bytes(_campaignDescription).length != 0, 'Campaign Title and description cannot be empty!');
+        require(_goalAmount > 0, 'Goal amount must be more than zero cusd!');
+        require(_fundingPeriodInDays >= 1 && _fundingPeriodInDays <= 7, 'Funding Period should be between 1 to 7 days');
 
         ++totalCampaigns;
         Campaign memory aCampaign = Campaign(msg.sender,_campaignTitle, _campaignDescription, _goalAmount, 0, block.timestamp + (_fundingPeriodInDays * 1 days), false, true, true);
         campaigns[totalCampaigns] = aCampaign;
      }
+
+    function getCampaign(uint _index) public view returns (address payable,
+        string memory, 
+        string memory,
+        uint256,
+        uint256,
+        uint256,
+        bool   
+    ) {
+        return ( campaigns[_index].campaignOwner,
+            campaigns[_index].campaignTitle, 
+            campaigns[_index].campaignDescription, 
+            campaigns[_index].goalAmount, 
+            campaigns[_index].totalAmountFunded,
+            campaigns[_index].deadline,
+            campaigns[_index].isCampaignOpen
+        );
+    }
+
+    function fundCampaign(uint256 _campaignID, uint256 _price) public payable {
+        
+        require(_price > 0, 'You must fund above 0 cusd');
+        require(campaigns[_campaignID].isExists,'This project does not exists');
+        require(campaigns[_campaignID].isCampaignOpen, 'This project has been closed or ended');
+ 
+        checkCampaignDeadline(_campaignID);
+        
+         require(
+          IERC20(cUsdTokenAddress).transferFrom(
+            msg.sender,
+             campaigns[_campaignID].campaignOwner,
+            _price
+           
+          ),
+          "funding this project has failed."
+        );
+
+        campaigns[_campaignID].contributions[msg.sender] = (campaigns[_campaignID].contributions[msg.sender]) + _price;
+        campaigns[_campaignID].totalAmountFunded = campaigns[_campaignID].totalAmountFunded + _price;
+
+          //check if funding goal achieved
+          if(campaigns[_campaignID].totalAmountFunded >= campaigns[_campaignID].goalAmount){
+                    campaigns[_campaignID].goalAchieved = true; 
+
+          }
+    }
+
+    function closeCampaign(uint256 _campaignID) public onlyCampaignOwner(_campaignID){
+            campaigns[_campaignID].isCampaignOpen = false;
+
+    }
+
+    function getContributions(uint256 _campaignID) public view returns(uint256 contribution){
+            require(campaigns[_campaignID].isExists,'Campaign does not exists');
+
+           return campaigns[_campaignID].contributions[msg.sender];
+
+    }
+
+    function checkCampaignDeadline(uint256 _campaignID)  internal {
+        
+        require(campaigns[_campaignID].isExists,'This p does not exists');
+        
+        if (now > campaigns[_campaignID].deadline){
+            campaigns[_campaignID].isCampaignOpen = false;//Close the campaign
+        }
+
+    }
 }
