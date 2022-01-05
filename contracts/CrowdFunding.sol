@@ -1,6 +1,5 @@
-  // SPDX-License-Identifier: MIT
-
-pragma solidity 0.8.0;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.5.8;
 interface IERC20 {
   function transfer(address, uint256) external returns (bool);
   function approve(address, uint256) external returns (bool);
@@ -14,9 +13,9 @@ interface IERC20 {
 }
 
 contract CrowdFund {
-  address payable public owner;
+  address public owner;
   uint256 public totalCampaigns;
-  address internal daiTokenAddress = 0x95b58a6bff3d14b7db2f5cb5f0ad413dc2940658;
+  address internal crowdTokenAddress = 0x20C1EB3cAA538954865aD9006bcC8a6f9C1952f3;
 
     struct Campaign {
         address payable campaignOwner; 
@@ -44,4 +43,18 @@ contract CrowdFund {
         require(msg.sender == campaigns[_campaignID].campaignOwner, "Only Campaign owner can call this function.");
         _;
     }
+
+    constructor() public {
+        owner = msg.sender;
+    }
+
+     function createCampaign(string memory _campaignTitle, string memory _campaignDescription, uint256 _goalAmount, uint256 _fundingPeriodInDays ) public {
+        require(bytes(_campaignTitle).length !=0 && bytes(_campaignDescription).length !=0, 'Campaign Title and description cannot be empty!');
+        require(_goalAmount > 0, 'Goal amount must be more than 0');
+        require(_fundingPeriodInDays >=1 && _fundingPeriodInDays <=7, 'Funding Period should be between 1 -7 days');
+
+        ++totalCampaigns;
+        Campaign memory aCampaign = Campaign(msg.sender,_campaignTitle, _campaignDescription, _goalAmount, 0, block.timestamp + (_fundingPeriodInDays * 1 days), false, true, true);
+        campaigns[totalCampaigns] = aCampaign;
+     }
 }
