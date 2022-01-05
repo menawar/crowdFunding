@@ -18,7 +18,7 @@ contract CrowdFund {
   uint256 public totalCampaigns;
   address internal daiTokenAddress = 0x95b58a6bff3d14b7db2f5cb5f0ad413dc2940658;
 
-  struct Campaign {
+    struct Campaign {
         address payable campaignOwner; 
         string campaignTitle; 
         string campaignDescription;
@@ -28,9 +28,20 @@ contract CrowdFund {
         bool goalAchieved;
         bool isCampaignOpen;
         bool isExists; 
-        
+
         mapping(address => uint256) contributions;
+    }
 
-  }
+    //stores a Campaign struct for each unique campaign ID.
+    mapping(uint256 => Campaign) campaigns;
 
+    modifier onlyOwner {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    modifier onlyCampaignOwner(uint256 _campaignID) {
+        require(msg.sender == campaigns[_campaignID].campaignOwner, "Only Campaign owner can call this function.");
+        _;
+    }
 }
